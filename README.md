@@ -236,3 +236,4 @@ Or copy the `skills/ui-enhancer` directory to `~/.claude/skills/` for global ava
 ## License
 
 MIT -- See [LICENSE](LICENSE)
+
