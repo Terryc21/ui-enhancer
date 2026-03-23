@@ -1,7 +1,7 @@
 ---
 name: ui-enhancer
 description: 'Systematic iOS/SwiftUI UI audit with design intent interview, 11-domain analysis (including Color Audit with adaptive Color Profile), element compaction, cross-view consistency checks, layout reorganization, design-aware push-back, App Store guardrails, and incremental apply with revert safety. 17 subcommands. Run /ui-enhancer help for all commands. Triggers: "enhance this UI", "ui enhancer", "improve this view", "screen review", "ux audit".'
-version: 3.0.0
+version: 3.1.0
 author: Terry Nyberg
 license: MIT
 allowed-tools: [Read, Grep, Glob, Bash, Write, Edit, AskUserQuestion]
@@ -88,17 +88,92 @@ Then proceed directly to Phase 1.
 
 ---
 
+## Skill Introduction (MANDATORY — run before anything else)
+
+On first invocation, ask the user two questions in a single `AskUserQuestion` call:
+
+**Question 1: "What's your experience level with Swift/SwiftUI?"**
+- **Beginner** — New to Swift. Plain language, analogies, define terms on first use.
+- **Intermediate** — Comfortable with SwiftUI basics. Standard terms, explain non-obvious patterns.
+- **Experienced (Recommended)** — Fluent with SwiftUI. Concise findings, no definitions.
+- **Senior/Expert** — Deep expertise. Terse, file:line only, skip explanations.
+
+**Question 2: "Would you like a brief explanation of what this skill does?"**
+- **No, let's go (Recommended)** — Skip explanation, proceed to audit.
+- **Yes, explain it** — Show a 3-5 sentence explanation adapted to the user's experience level (see below), then proceed.
+
+**Experience-adapted explanations for UI Enhancer:**
+
+- **Beginner**: "UI Enhancer is like having a professional designer review every screen in your app. It checks 11 different things — spacing, colors, accessibility, layout efficiency, and more — then suggests specific improvements. It won't just say 'this looks wrong'; it'll show you exactly what to change and why. It works one view at a time, applying changes incrementally so you can undo anything."
+
+- **Intermediate**: "UI Enhancer performs an 11-domain analysis of SwiftUI views: layout, spacing, color accessibility, typography, element compaction, cross-view consistency, and more. It interviews you about design intent first, then audits against Apple HIG and your app's design system. Changes are applied incrementally with revert safety."
+
+- **Experienced**: "11-domain SwiftUI UI audit with design intent interview, adaptive color profiles, element compaction, cross-view consistency checks, layout reorganization, App Store guardrails, and incremental apply with revert safety. 17 subcommands."
+
+- **Senior/Expert**: "11-domain view audit: layout, color, typography, spacing, compaction, consistency, accessibility. Interview → analyze → apply incrementally."
+
+Store the experience level as `USER_EXPERIENCE` and apply to ALL output for the session.
+
+---
+
+## Terminal Width Check (MANDATORY — run first)
+
+Before ANY output, check terminal width:
+```bash
+tput cols
+```
+
+- **160+ columns** → Use full 8-column Issue Rating Table. Proceed immediately.
+- **Under 160 columns** → **Prompt the user first** using `AskUserQuestion`:
+
+  **Question:** "Your terminal is [N] columns wide. The full Issue Rating Table needs 160+ columns. Want to widen it now?"
+  - **"I've widened it" (Recommended)** — Re-run `tput cols` to confirm. If tput still reports the old width (terminal resize doesn't always propagate to the shell), trust the user and use full tables anyway.
+  - **"Use compact tables"** — Use compact 3-column table with finding text on separate lines below each row:
+    ```
+    | # | Urgency | Fix Effort |
+    |---|---------|------------|
+    | 1 | 🟡 HIGH | Small      |
+    |   `activeImporterKind` never assigned — file importer silently drops files |
+    |   `EnhancedItemDetailView.swift:93` |
+    | 2 | ⚪ LOW  | Trivial    |
+    |   `showingAddImageMenu` declared but never used — dead code |
+    |   `EnhancedItemDetailView.swift:94` |
+    ```
+    Full 8-column table goes to report file only (if report delivery was selected).
+  - **"Skip check"** — Use full 8-column table regardless (user accepts wrapping).
+
+  If the user chose compact mode, **after each compact table, print:**
+
+```
+📐 Compact table (terminal: [N] cols). Say "show full table" for all 8 columns.
+```
+
+If the user later says "show full table", "wide table", or "full ratings", re-render the most recent findings table in full 8-column format regardless of terminal width. Apply to ALL tables in the session.
+
+---
+
 ## Phase 1: Interview
 
 Before analyzing, run a brief intake to focus the audit on what matters most.
 
 **Display this instruction before the first set of questions:**
 
-> To answer, type the option labels (e.g., "General polish, All domains, Moderate") or use numbers (e.g., "1, 1, 1, 1"). You can answer all questions at once or one at a time.
+> To answer, type the option labels (e.g., "General polish, All domains, Moderate, Experienced") or use numbers (e.g., "1, 1, 1, 1, 3"). You can answer all questions at once or one at a time.
 
 ```
 questions:
 [
+  {
+    "question": "What's your experience level with Swift/SwiftUI?",
+    "header": "Experience",
+    "options": [
+      {"label": "Beginner", "description": "New to Swift — plain language, analogies, define terms on first use"},
+      {"label": "Intermediate", "description": "Comfortable with SwiftUI basics — standard terms, explain non-obvious patterns"},
+      {"label": "Experienced (Recommended)", "description": "Fluent with SwiftUI — concise findings, no definitions"},
+      {"label": "Senior/Expert", "description": "Deep expertise — terse output, file:line only, skip explanations"}
+    ],
+    "multiSelect": false
+  },
   {
     "question": "What's the main reason for this review?",
     "header": "Focus",
@@ -176,6 +251,53 @@ questions:
 ]
 ```
 
+### Attendance (always ask)
+
+```
+questions:
+[
+  {
+    "question": "Will you be stepping away during the audit?",
+    "header": "Attendance",
+    "options": [
+      {"label": "I'll be here (Recommended)", "description": "Normal mode — permission prompts may appear for writes/edits"},
+      {"label": "Hands-free (walk away safe)", "description": "Read-only analysis only — no edits, no Bash, no prompts. Code changes deferred until you return."},
+      {"label": "Pre-approved", "description": "You've configured Claude Code permissions for this session. Full speed, no restrictions."}
+    ],
+    "multiSelect": false
+  }
+]
+```
+
+**If "Hands-free"** — restrict to Read, Grep, Glob tools only. Complete Phases 1-5 (interview through analysis) without blocking. Defer Phase 6+ (code changes) until the user returns. Print when paused:
+```
+⏱ Hands-free audit complete through Phase 5 (analysis).
+  Phases requiring action: Phase 6 (compaction), Phase 7 (apply changes)
+  Reply to continue with supervised phases.
+```
+
+**If "Pre-approved"** — full speed, no restrictions. Assumes permissions are configured per the Permission Setup guide below.
+
+### Permission Setup (for unattended runs)
+
+To avoid permission prompts during audits, pre-allow these read-only patterns in Claude Code settings. Safe to auto-approve — they cannot modify your codebase:
+
+```
+# Already safe by default (no setup needed):
+Read, Grep, Glob — always auto-approved
+
+# Add these for unattended Bash scans:
+Bash(find:*)
+Bash(wc:*)
+Bash(stat:*)
+```
+
+**Do NOT auto-approve** (keep prompted — they modify state):
+```
+Edit, Write — file modifications
+Bash(rm:*), Bash(git:*) — destructive operations
+```
+
 **After all questions, always offer:**
 
 > Anything else I should know? (design preferences, constraints, specific elements to preserve — or press Enter to skip)
@@ -204,6 +326,16 @@ The interview determines:
 - Whether to include competitive comparison
 - Which elements are sacred (`[PRESERVE]` tag)
 - How aggressive to be with changes (Conservative / Moderate / Aggressive)
+- How to pitch explanations (experience level)
+
+### Experience-Level Adaptation
+
+Adjust ALL output (findings, questions, recommendations, compaction options) based on the user's experience level:
+
+- **Beginner**: Plain language, real-world analogies. "This header takes up 120 points of space — that's about a third of the visible screen on an iPhone. Compacting it would let users see their content sooner." Define SwiftUI terms on first use. When presenting compaction options, explain what each choice means visually.
+- **Intermediate**: Standard SwiftUI terminology, explain non-obvious tradeoffs. "The `SheetHeader` uses 120pt — compacting to inline icon+title saves 80pt and keeps the visual identity. The `.stuffolioCard()` modifier handles the styling." Explain architectural choices but not basic concepts.
+- **Experienced** (default): Concise findings. "SheetHeader: 120pt → 40pt inline. Saves 80pt above fold." No definitions, focus on measurements and tradeoffs.
+- **Senior/Expert**: Minimal. "SheetHeader 120→40pt. `.stuffolioCard()` handles styling. 3 files touched." Skip design rationale — just the change, the impact, and the blast radius.
 
 ---
 
@@ -1547,6 +1679,35 @@ Findings resolved: 8/12
 Tests added: 5
 ```
 
+### Phase Progress Banner (CRITICAL — BLOCKING requirement)
+
+**After EVERY phase and EVERY commit, your NEXT output MUST be the progress banner followed by the next-phase `AskUserQuestion`. Do not output anything else first. Do not leave a blank prompt.**
+
+After completing each phase, **always** print this banner:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Phase [N] of 9 complete: [phase name]
+
+⏱  Next: Phase [N+1] — [phase name] (~[time estimate])
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+Phase time estimates:
+| Phase | Name | Est. Time |
+|-------|------|-----------|
+| 1 | Interview | ~2 min |
+| 2-2b | Gather Input + Classification | ~3 min |
+| 3 | Screenshot Analysis | ~2 min |
+| 4 | Code Analysis | ~3-5 min |
+| 5 | Domain Analysis | ~5-10 min |
+| 6 | Report + Compaction | ~3-5 min |
+| 7 | Implementation | ~10-20 min |
+| 8 | Tests | ~5-10 min |
+| 9 | Summary | ~2 min |
+
+Then immediately prompt for the next phase. **After a commit**, reprint the banner and auto-prompt. Never leave a blank prompt.
+
 ---
 
 ## Optional Features
@@ -1725,5 +1886,64 @@ If chrome/status/badge scores highest → hierarchy issue.
 | Typography baseline | San Francisco, Dynamic Type | San Francisco, fixed sizes acceptable |
 | **Large files (1000+ lines)** | Partial file reads may miss context, leading to incomplete findings | Read the full file in sections before generating findings. If the file exceeds 1000 lines, note it and focus on the visible sections. |
 | **Rename cascades** | Renaming an enum case (e.g., `ToolCategory.input` → `.importExport`) requires updating every `switch` statement | After any rename, grep the codebase for the old name to verify no references remain. Build before moving to the next fix. |
+
+---
+
+## Cross-Skill Handoff
+
+UI Enhancer complements **ui-path-radar** (navigation paths), **roundtrip-radar** (data safety), and **release-ready-radar** (ship readiness). Findings from one skill inform the others.
+
+### On Completion — Write Handoff
+
+After completing a view audit, write/update `.agents/ui-audit/ui-enhancer-handoff.yaml`:
+
+```yaml
+source: ui-enhancer
+date: <ISO 8601>
+project: <project name>
+views_audited: <count>
+
+for_ui_path_radar:
+  # Visual issues that suggest structural navigation problems
+  suspects:
+    - view: "<view file>"
+      finding: "<e.g., button with no visible action>"
+      question: "<is this button wired to a destination?>"
+
+for_roundtrip_radar:
+  # Views with data binding concerns found during visual audit
+  suspects:
+    - workflow: "<affected workflow>"
+      finding: "<e.g., form field not reflected in saved data>"
+      file: "<file:line>"
+      question: "<does this field round-trip correctly?>"
+
+for_release_ready_radar:
+  # Visual/UX issues that affect ship readiness
+  blockers:
+    - finding: "<description>"
+      urgency: "<CRITICAL|HIGH>"
+```
+
+**Fire-and-forget:** Always write this file regardless of whether other skills are installed.
+
+### On Startup — Read Handoffs
+
+Before Phase 1 (Interview), check for handoff files:
+- `.agents/ui-audit/ui-path-radar-handoff.yaml` — dead buttons to remove before visual audit
+- `.agents/ui-audit/roundtrip-radar-handoff.yaml` — data issues that affect view correctness
+
+If found, incorporate as context during the interview phase (e.g., "ui-path-radar found this button is dead — should we remove it?"). If not found, proceed normally.
+
+---
+
+## REMINDER (End-of-File — Survives Context Compaction)
+
+**CRITICAL:** After EVERY phase, EVERY commit, and EVERY view transition:
+1. Print the progress banner (phase-level)
+2. Immediately `AskUserQuestion` for the next step
+3. NEVER leave a blank prompt
+
+This reminder is placed at the end of the file because context compaction tends to preserve the beginning and end. If you are unsure whether to print the banner, **print it**.
 
 </ui-enhancer>
