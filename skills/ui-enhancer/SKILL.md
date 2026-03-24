@@ -1379,8 +1379,9 @@ Without per-finding review, users lose the ability to:
 For each finding in the playbook:
 
 1. **Apply the fix** (Edit tool)
-2. **Show what changed** (brief description + files modified)
-3. **Ask the user:**
+2. **If testable** (accessibility fix, dead code removal, component wiring change) — write a test. If purely visual (spacing, color, layout reorder) — skip the test, visual verification via screenshot is the appropriate check.
+3. **Show what changed** (brief description + files modified + test if added)
+4. **Ask the user:**
 
 ```
 questions:
@@ -1891,7 +1892,7 @@ If chrome/status/badge scores highest → hierarchy issue.
 
 ## Cross-Skill Handoff
 
-UI Enhancer complements **ui-path-radar** (navigation paths), **roundtrip-radar** (data safety), and **release-ready-radar** (ship readiness). Findings from one skill inform the others.
+UI Enhancer complements **data-model-radar** (model layer), **ui-path-radar** (navigation paths), **roundtrip-radar** (data safety), and **capstone-radar** (ship readiness). Findings from one skill inform the others.
 
 ### On Completion — Write Handoff
 
@@ -1918,7 +1919,7 @@ for_roundtrip_radar:
       file: "<file:line>"
       question: "<does this field round-trip correctly?>"
 
-for_release_ready_radar:
+for_capstone_radar:
   # Visual/UX issues that affect ship readiness
   blockers:
     - finding: "<description>"
