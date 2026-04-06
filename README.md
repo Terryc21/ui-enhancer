@@ -1,5 +1,7 @@
 # UI Enhancer v3.0
 
+![Visitors](https://komarev.com/ghpvc/?username=Terryc21&repo=ui-enhancer&label=visitors&color=blue) ![GitHub stars](https://img.shields.io/github/stars/Terryc21/ui-enhancer?style=flat) ![GitHub forks](https://img.shields.io/github/forks/Terryc21/ui-enhancer?style=flat)
+
 Systematic iOS/SwiftUI UI audit skill for [Claude Code](https://claude.com/claude-code). Analyzes screenshots and code together, recommends improvements with design-intent awareness, and applies changes incrementally with revert safety.
 
 ## What It Does
